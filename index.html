@@ -3,13 +3,125 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Users Feed</title>
+  <title>Users Directory</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="container">
-    <h1>Users Directory</h1>
-    <div id="users-grid" class="users-grid"></div>
+    <header class="header">
+      <h1>User Profiles Feed</h1>
+      <p class="subtitle">Dynamic user directory connected to JSONPlaceholder API</p>
+    </header>
+
+    <div id="users-grid" class="users-grid">
+      <div id="loading" class="loading">Loading user records...</div>
+    </div>
   </div>
+
+  <script>
+    const API_URL = 'https://jsonplaceholder.typicode.com/users';
+
+    async function fetchAndRenderUsers() {
+      const grid = document.getElementById('users-grid');
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const users = await response.json();
+        const firstSixUsers = users.slice(0, 6);
+
+        grid.innerHTML = '';
+
+        firstSixUsers.forEach(user => {
+          const card = createUserCard(user);
+          grid.appendChild(card);
+        });
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        grid.innerHTML = `<div class="error">Failed to load user records. Please try again later.</div>`;
+      }
+    }
+
+    function createUserCard(user) {
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.setAttribute('data-id', user.id);
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-avatar">${escapeHtml(user.name.charAt(0))}</div>
+          <div class="user-titles">
+            <h2 class="user-name">${escapeHtml(user.name)}</h2>
+            <span class="user-username">@${escapeHtml(user.username)}</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="user-email">
+            <svg class="email-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+              <polyline points="22,6 12,13 2,6"></polyline>
+            </svg>
+            ${escapeHtml(user.email)}
+          </p>
+        </div>
+        <button class="remove-btn" onclick="removeUser(${user.id}, this)">
+          <svg class="trash-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+          Remove User
+        </button>
+      `;
+
+      return card;
+    }
+
+    async function removeUser(id, btnElement) {
+      const card = btnElement.closest('.user-card');
+      btnElement.disabled = true;
+      btnElement.textContent = 'Removing...';
+
+      try {
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok || response.status === 200 || response.status === 204) {
+          card.classList.add('removing');
+          setTimeout(() => {
+            card.remove();
+            const remainingCards = document.querySelectorAll('.user-card');
+            if (remainingCards.length === 0) {
+              document.getElementById('users-grid').innerHTML = '<div class="empty-state">No users remaining in feed.</div>';
+            }
+          }, 300);
+        } else {
+          alert('Failed to delete user.');
+          btnElement.disabled = false;
+          btnElement.innerHTML = `Remove User`;
+        }
+      } catch (error) {
+        console.error('Error removing user:', error);
+        alert('Network error while attempting to delete user.');
+        btnElement.disabled = false;
+        btnElement.innerHTML = `Remove User`;
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchAndRenderUsers);
+  </script>
 </body>
 </html>
